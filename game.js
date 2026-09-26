@@ -13,7 +13,11 @@ const COLORS = [
   '#e57373', // Z - red
   '#82b1ff', // J - pale blue
   '#ffb74d', // L - orange
+  '#b0bec5', // N - tuerca (gris acero)
 ];
+
+// Agujero bloqueado de la tuerca: cuenta como celda ocupada, nada puede rellenarlo
+const HOLE = 9;
 
 const PIECES = [
   null,
@@ -24,6 +28,7 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,HOLE,8],[8,8,8]],               // N (tuerca)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -46,11 +51,13 @@ let board, current, next, score, lines, level, paused, gameOver, lastTime, dropA
 const THEME_KEY = 'tetris-theme';
 let gridLineColor = '#22222e';
 let blockHighlightColor = 'rgba(255,255,255,0.12)';
+let boardBgColor = '#0f0f17';
 
 function applyThemeColors() {
   const style = getComputedStyle(document.body);
   gridLineColor = style.getPropertyValue('--grid-line').trim();
   blockHighlightColor = style.getPropertyValue('--block-highlight').trim();
+  boardBgColor = style.getPropertyValue('--bg').trim();
 }
 
 function applyTheme(theme) {
@@ -78,7 +85,7 @@ function createBoard() {
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.floor(Math.random() * (PIECES.length - 1)) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -126,8 +133,10 @@ function merge() {
 
 function clearLines() {
   let cleared = 0;
+  let rusty = 0; // líneas oxidadas: contenían un agujero de tuerca
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(v => v !== 0)) {
+      if (board[r].includes(HOLE)) rusty++;
       board.splice(r, 1);
       board.unshift(new Array(COLS).fill(0));
       cleared++;
@@ -136,7 +145,8 @@ function clearLines() {
   }
   if (cleared) {
     lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
+    // cada línea oxidada aporta sólo la mitad de su parte del puntaje
+    score += Math.round((LINE_SCORES[cleared] || 0) * level * (1 - 0.5 * rusty / cleared));
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
@@ -189,6 +199,21 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
+  if (colorIndex === HOLE) {
+    // agujero de la tuerca: metal de fondo con un aro vacío en el centro
+    context.globalAlpha = alpha ?? 1;
+    context.fillStyle = COLORS[8];
+    context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+    context.beginPath();
+    context.arc(x * size + size / 2, y * size + size / 2, size * 0.32, 0, Math.PI * 2);
+    context.fillStyle = boardBgColor;
+    context.fill();
+    context.strokeStyle = 'rgba(0,0,0,0.45)';
+    context.lineWidth = 1.5;
+    context.stroke();
+    context.globalAlpha = 1;
+    return;
+  }
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
