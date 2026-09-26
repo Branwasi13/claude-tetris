@@ -1,0 +1,94 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    # Ignora issues de bots y los que mencionan @claude (los maneja claude.yml)
+    if: |
+      github.event.issue.user.type != 'Bot' &&
+      !contains(github.event.issue.body, '@claude') &&
+      !contains(github.event.issue.title, '@claude')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Asegurar labels de complejidad y prioridad
+        run: |
+          gh label create "complexity: trivial"  --color "c5def5" --description "Cambio mínimo (constante o string en un archivo)" --force
+          gh label create "complexity: small"    --color "82b1e8" --description "Afecta a una sola función" --force
+          gh label create "complexity: medium"   --color "3f7fd1" --description "Varias funciones o estado nuevo" --force
+          gh label create "complexity: large"    --color "1d4e9e" --description "Cambio de arquitectura o de varios sistemas" --force
+          gh label create "priority: low"        --color "c2e0c6" --description "Cosmético o nice-to-have" --force
+          gh label create "priority: medium"     --color "fbca04" --description "Problema visual o de UX notorio" --force
+          gh label create "priority: high"       --color "f9831f" --description "Mecánica central afectada" --force
+          gh label create "priority: critical"   --color "b60205" --description "El juego no arranca o es injugable" --force
+
+      - name: Analizar issue con Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Sos el encargado de hacer triage del issue #${{ github.event.issue.number }}
+            del repositorio ${{ github.repository }}. Respondé y escribí todo en español.
+
+            Pasos:
+
+            1. Leé el issue con:
+               gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments
+
+            2. Leé el código relevante (game.js, index.html, style.css) con Read/Grep/Glob
+               para ubicar la causa concreta. Usá CLAUDE.md como mapa de la arquitectura.
+               Citá siempre `archivo:línea`.
+
+            3. Asigná exactamente UNA label `complexity:` y UNA label `priority:`.
+
+               Complejidad:
+               - `complexity: trivial`: cambio de una constante o string en un solo archivo.
+               - `complexity: small`: afecta a una sola función.
+               - `complexity: medium`: varias funciones o estado nuevo.
+               - `complexity: large`: cambio de arquitectura o de varios sistemas
+                 (canvas + HUD + input).
+
+               Prioridad:
+               - `priority: critical`: el juego no arranca o es injugable.
+               - `priority: high`: falla una mecánica central (colisión, scoring, rotación).
+               - `priority: medium`: problema visual o de UX notorio.
+               - `priority: low`: cosmético o nice-to-have.
+
+               Aplicalas con `gh issue edit <n> --add-label "<label>"`. Si el issue ya tenía
+               otra label con el mismo prefijo (`complexity:` o `priority:`), quitala con
+               `--remove-label` para que la nueva reemplace a la anterior. Si corresponde
+               claramente, agregá también `bug`, `enhancement` o `documentation`.
+
+            4. Publicá un diagnóstico como comentario, que el equipo usará para implementar
+               la solución. El comentario DEBE empezar con esta línea exacta:
+               <!-- claude-triage -->
+               y tener estas secciones:
+               - **Resumen**
+               - **Causa probable** (con `archivo:línea`)
+               - **Archivos a tocar**
+               - **Pasos sugeridos**
+               - **Riesgos / qué verificar** (incluí siempre abrir `index.html` en el
+                 navegador y jugar, porque el repo no tiene tests)
+
+            5. Evitá duplicados: antes de comentar, listá los comentarios del issue con
+               `gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments`.
+               Si ya existe uno cuyo cuerpo contiene `<!-- claude-triage -->`, actualizalo con
+               `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<id> -f body=...`.
+               Si no existe, creá uno nuevo con `gh issue comment`.
+
+            No modifiques archivos del repositorio ni el cuerpo del issue.
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh api:*)"
