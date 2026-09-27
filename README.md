@@ -22,6 +22,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [2. `style.css`](#2-stylecss)
     - [3. `game.js`](#3-gamejs)
     - [Flujo del juego](#flujo-del-juego)
+  - [Tabla de récords](#tabla-de-récords)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
@@ -42,6 +43,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Tabla de récords local** (top 5, mejor combo y líneas máximas) persistida en `localStorage`.
 
 ---
 
@@ -137,6 +139,19 @@ init()
 ```
 
 Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+
+---
+
+## Tabla de récords
+
+El juego guarda localmente (`localStorage`, sin backend) el **top 5 de puntuaciones**:
+
+- Al arrancar la página se muestra una **pantalla de inicio** (`#start-screen`) con el top 5 de récords, el **mejor combo** histórico y las **líneas máximas** alcanzadas en una partida. El botón **Jugar** recién ahí arranca el juego.
+- En el overlay de **Game Over**, si la puntuación de la partida entra en el top 5, aparece un campo de texto para ingresar el nombre del jugador y un botón **Guardar**. Al guardar, el registro se agrega a la tabla y se resalta.
+- Cada registro guarda `{ nombre, puntuación, líneas, nivel, fecha }`, ordenados de mayor a menor puntuación, recortados a 5 elementos.
+- **Combo**: se incrementa cada vez que se limpia al menos una línea en locks consecutivos, y se reinicia a 0 si un lock no limpia ninguna línea. El mejor combo alcanzado se persiste junto con las líneas máximas históricas.
+- El botón **Borrar récords** (en la pantalla de inicio) vacía la tabla de puntuaciones y las estadísticas, previa confirmación.
+- Claves usadas en `localStorage`: `tetris-records` (array del top 5) y `tetris-best-stats` (`{ bestCombo, maxLines }`).
 
 ---
 
