@@ -349,3 +349,149 @@ kbd {
   width: 100%;
   cursor: pointer;
 }
+
+/* ---- Récords ---- */
+.records-panel {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.records-panel.hidden {
+  display: none;
+}
+
+.records-list {
+  width: 100%;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+}
+
+.records-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-bg);
+  color: var(--text);
+}
+
+.records-list li.record-new {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.records-list .records-empty {
+  justify-content: center;
+  color: var(--dim-text);
+  border-style: dashed;
+}
+
+.best-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.save-record-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.save-record-form.hidden {
+  display: none;
+}
+
+.save-record-form label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.save-record-form input {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  text-align: center;
+  width: 160px;
+}
+
+.save-record-form input:focus {
+  outline: 2px solid var(--accent);
+}
+
+#save-record-btn {
+  background: var(--accent);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#save-record-btn:hover {
+  background: var(--accent-hover);
+}
+
+.secondary-btn {
+  margin-top: 4px;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.secondary-btn:hover {
+  background: var(--danger);
+  color: var(--restart-text);
+}
+
+#start-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: var(--accent);
+}
+
+#play-btn {
+  margin-top: 4px;
+  background: var(--accent);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#play-btn:hover {
+  background: var(--accent-hover);
+}
