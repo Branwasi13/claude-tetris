@@ -52,7 +52,7 @@ const controlsToggleBtn = document.getElementById('controls-toggle-btn');
 const pauseControls = document.getElementById('pause-controls');
 const startLevelSelect = document.getElementById('start-level-select');
 
-let board, current, next, score, lines, level, startLevel, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, startLevel, gameOver, lastTime, dropAccum, dropInterval, animId;
 let pauseMenuOpen = false;
 let suppressNextRepeat = false;
 
@@ -304,8 +304,13 @@ function endGame() {
   overlay.classList.remove('hidden');
 }
 
+function hidePauseMenu() {
+  pauseMenu.classList.add('hidden');
+  pauseControls.classList.add('hidden');
+  pauseMenuOpen = false;
+}
+
 function openPauseMenu() {
-  paused = true;
   pauseMenuOpen = true;
   cancelAnimationFrame(animId);
   startLevelSelect.value = String(getStartLevel());
@@ -314,10 +319,7 @@ function openPauseMenu() {
 }
 
 function closePauseMenu() {
-  pauseMenu.classList.add('hidden');
-  pauseControls.classList.add('hidden');
-  pauseMenuOpen = false;
-  paused = false;
+  hidePauseMenu();
   suppressNextRepeat = true;
   lastTime = performance.now();
   dropAccum = 0;
@@ -355,8 +357,6 @@ function init() {
   lines = 0;
   startLevel = getStartLevel();
   level = startLevel;
-  paused = false;
-  pauseMenuOpen = false;
   gameOver = false;
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
@@ -365,20 +365,24 @@ function init() {
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
-  pauseMenu.classList.add('hidden');
-  pauseControls.classList.add('hidden');
+  hidePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
+  if (e.code === 'Escape' && document.activeElement === startLevelSelect) {
+    // dejar que el navegador cierre el desplegable nativo del select
+    // en vez de cerrar todo el menú de pausa de un golpe
+    return;
+  }
   if (e.code === 'KeyP' || e.code === 'Escape') {
     if (e.repeat) return;
     togglePause();
     return;
   }
   if (pauseMenuOpen) return;
-  if (paused || gameOver) return;
+  if (gameOver) return;
   if (suppressNextRepeat) {
     suppressNextRepeat = false;
     if (e.repeat) return;
@@ -412,10 +416,7 @@ resumeBtn.addEventListener('click', () => {
 });
 
 restartPauseBtn.addEventListener('click', () => {
-  pauseMenu.classList.add('hidden');
-  pauseControls.classList.add('hidden');
-  pauseMenuOpen = false;
-  paused = false;
+  hidePauseMenu();
   suppressNextRepeat = true;
   init();
 });
