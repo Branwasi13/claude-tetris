@@ -24,6 +24,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [Flujo del juego](#flujo-del-juego)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
+  - [Skins visuales](#skins-visuales)
   - [Personalización](#personalización)
   - [Licencia](#licencia)
 
@@ -174,6 +175,21 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 ├── game.js         # Toda la lógica del Tetris (~300 líneas)
 └── README.md
 ```
+
+---
+
+## Skins visuales
+
+Desde el selector ubicado junto al interruptor de tema claro/oscuro se puede elegir entre 4 skins, que cambian la paleta de colores y el estilo de dibujado de los bloques sin recargar la página:
+
+- **Retro** — bloques cuadrados y colores planos (estilo original).
+- **Neón** — fondo oscuro con efecto de brillo (`shadowBlur`/`shadowColor`) sobre cada bloque.
+- **Pastel** — paleta de tonos suaves con esquinas redondeadas.
+- **Pixel art** — bordes en bisel claro/oscuro y una cuadrícula interna que simula textura de sprite.
+
+En todas las skins se conserva el caso especial de la pieza "tuerca" (el aro vacío en su centro), adaptando su estilo a cada una. La preferencia elegida se guarda en `localStorage` (clave `tetris-skin`) y convive con el tema claro/oscuro.
+
+En `game.js`, cada skin se define como una entrada del objeto `SKINS`, con su propia paleta `colors` y su propia función `drawBlock`. La variable `activeSkin` apunta a la skin actualmente seleccionada, y las funciones `draw()`/`drawNext()` delegan en ella a través de un wrapper `drawBlock` para renderizar el tablero, la pieza fantasma, la pieza actual y la vista previa.
 
 ---
 
