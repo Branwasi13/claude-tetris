@@ -45,6 +45,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -57,7 +58,10 @@ function applyThemeColors() {
   const style = getComputedStyle(document.body);
   gridLineColor = style.getPropertyValue('--grid-line').trim();
   blockHighlightColor = style.getPropertyValue('--block-highlight').trim();
-  boardBgColor = style.getPropertyValue('--bg').trim();
+  // La skin Neón fuerza el fondo del canvas a negro puro (con glow) sin
+  // importar el tema claro/oscuro activo; el resto de las skins usan el
+  // fondo del tema actual.
+  boardBgColor = activeSkin === SKINS.neon ? '#000000' : style.getPropertyValue('--bg').trim();
 }
 
 function applyTheme(theme) {
@@ -77,8 +81,6 @@ themeToggle.addEventListener('change', () => {
   setTheme(themeToggle.checked ? 'light' : 'dark');
   themeToggle.blur();
 });
-
-applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -197,31 +199,200 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+// Dibuja el aro vacío del centro de la pieza "tuerca" (colorIndex === HOLE),
+// compartido por las 4 skins para no duplicar la lógica del "agujero".
+function drawHoleRing(context, cx, cy, radius, strokeColor, lineWidth) {
+  context.beginPath();
+  context.arc(cx, cy, radius, 0, Math.PI * 2);
+  context.fillStyle = boardBgColor;
+  context.fill();
+  context.strokeStyle = strokeColor;
+  context.lineWidth = lineWidth;
+  context.stroke();
+}
+
+// Cada skin define su propia paleta (índices 1-8, igual longitud que COLORS)
+// y su propia función de dibujo de bloque. El caso especial HOLE (agujero
+// de la tuerca) se preserva en las 4, adaptando el estilo del aro.
+const SKINS = {
+  retro: {
+    colors: COLORS,
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      if (!colorIndex) return;
+      if (colorIndex === HOLE) {
+        // agujero de la tuerca: metal de fondo con un aro vacío en el centro
+        context.globalAlpha = alpha ?? 1;
+        context.fillStyle = this.colors[8];
+        context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+        drawHoleRing(context, x * size + size / 2, y * size + size / 2, size * 0.32, 'rgba(0,0,0,0.45)', 1.5);
+        context.globalAlpha = 1;
+        return;
+      }
+      const color = this.colors[colorIndex];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      context.fillStyle = blockHighlightColor;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      context.globalAlpha = 1;
+    },
+  },
+
+  neon: {
+    colors: [
+      null,
+      '#00e5ff', // I
+      '#faff00', // O
+      '#e040fb', // T
+      '#39ff14', // S
+      '#ff1744', // Z
+      '#448aff', // J
+      '#ff9100', // L
+      '#e0e0ff', // N - tuerca
+    ],
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      if (!colorIndex) return;
+      const px = x * size, py = y * size;
+      context.globalAlpha = alpha ?? 1;
+      if (colorIndex === HOLE) {
+        const glow = this.colors[8];
+        context.shadowBlur = 10;
+        context.shadowColor = glow;
+        context.fillStyle = glow;
+        context.fillRect(px + 2, py + 2, size - 4, size - 4);
+        context.shadowBlur = 0;
+        drawHoleRing(context, px + size / 2, py + size / 2, size * 0.3, glow, 1.5);
+        context.globalAlpha = 1;
+        return;
+      }
+      const color = this.colors[colorIndex];
+      context.shadowBlur = 14;
+      context.shadowColor = color;
+      context.fillStyle = color;
+      context.fillRect(px + 2, py + 2, size - 4, size - 4);
+      context.shadowBlur = 0;
+      context.strokeStyle = color;
+      context.lineWidth = 1;
+      context.strokeRect(px + 2, py + 2, size - 4, size - 4);
+      context.globalAlpha = 1;
+    },
+  },
+
+  pastel: {
+    colors: [
+      null,
+      '#aee1f2', // I
+      '#fff2b2', // O
+      '#dcbdec', // T
+      '#bdeccb', // S
+      '#f5b6b6', // Z
+      '#bcd0f7', // J
+      '#f8d3a8', // L
+      '#dcdce6', // N - tuerca
+    ],
+    drawRoundedRect(context, px, py, s, r) {
+      context.beginPath();
+      if (context.roundRect) {
+        context.roundRect(px, py, s, s, r);
+      } else {
+        // fallback manual para navegadores sin roundRect
+        context.moveTo(px + r, py);
+        context.arcTo(px + s, py, px + s, py + s, r);
+        context.arcTo(px + s, py + s, px, py + s, r);
+        context.arcTo(px, py + s, px, py, r);
+        context.arcTo(px, py, px + s, py, r);
+        context.closePath();
+      }
+    },
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      if (!colorIndex) return;
+      const px = x * size + 1, py = y * size + 1, s = size - 2, r = size * 0.22;
+      context.globalAlpha = alpha ?? 1;
+      if (colorIndex === HOLE) {
+        this.drawRoundedRect(context, px, py, s, r);
+        context.fillStyle = this.colors[8];
+        context.fill();
+        drawHoleRing(context, px + s / 2, py + s / 2, size * 0.3, 'rgba(0,0,0,0.25)', 1.5);
+        context.globalAlpha = 1;
+        return;
+      }
+      this.drawRoundedRect(context, px, py, s, r);
+      context.fillStyle = this.colors[colorIndex];
+      context.fill();
+      // highlight suave en la parte superior
+      context.fillStyle = 'rgba(255,255,255,0.4)';
+      this.drawRoundedRect(context, px + 2, py + 2, s - 4, r * 0.6);
+      context.fill();
+      context.globalAlpha = 1;
+    },
+  },
+
+  pixelart: {
+    colors: COLORS,
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      if (!colorIndex) return;
+      const px = x * size + 1, py = y * size + 1, s = size - 2;
+      const color = colorIndex === HOLE ? this.colors[8] : this.colors[colorIndex];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = color;
+      context.fillRect(px, py, s, s);
+      // bisel claro/oscuro estilo sprite pixel art
+      context.fillStyle = 'rgba(255,255,255,0.3)';
+      context.fillRect(px, py, s, 2);
+      context.fillRect(px, py, 2, s);
+      context.fillStyle = 'rgba(0,0,0,0.3)';
+      context.fillRect(px, py + s - 2, s, 2);
+      context.fillRect(px + s - 2, py, 2, s);
+      // cuadrícula interna 2x2
+      context.strokeStyle = 'rgba(0,0,0,0.2)';
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(px + s / 2, py);
+      context.lineTo(px + s / 2, py + s);
+      context.moveTo(px, py + s / 2);
+      context.lineTo(px + s, py + s / 2);
+      context.stroke();
+      if (colorIndex === HOLE) {
+        drawHoleRing(context, px + s / 2, py + s / 2, size * 0.28, 'rgba(0,0,0,0.45)', 1.5);
+      }
+      context.globalAlpha = 1;
+    },
+  },
+};
+
+const SKIN_KEY = 'tetris-skin';
+let activeSkin = SKINS.retro;
+
+function applySkin(skinName) {
+  activeSkin = SKINS[skinName] || SKINS.retro;
+  skinSelect.value = SKINS[skinName] ? skinName : 'retro';
+  // el fondo del canvas depende del tema, salvo en Neón (siempre negro)
+  applyThemeColors();
+}
+
+function setSkin(skinName) {
+  try { localStorage.setItem(SKIN_KEY, skinName); } catch (e) {}
+  applySkin(skinName);
+  draw();
+  drawNext();
+}
+
+skinSelect.addEventListener('change', () => {
+  setSkin(skinSelect.value);
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem(SKIN_KEY); } catch (e) {}
+applySkin(savedSkin || 'retro');
+
+// Se aplica el tema recién ahora, ya que depende de la skin activa (Neón
+// fuerza fondo negro sin importar el tema claro/oscuro).
+applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
-  if (!colorIndex) return;
-  if (colorIndex === HOLE) {
-    // agujero de la tuerca: metal de fondo con un aro vacío en el centro
-    context.globalAlpha = alpha ?? 1;
-    context.fillStyle = COLORS[8];
-    context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-    context.beginPath();
-    context.arc(x * size + size / 2, y * size + size / 2, size * 0.32, 0, Math.PI * 2);
-    context.fillStyle = boardBgColor;
-    context.fill();
-    context.strokeStyle = 'rgba(0,0,0,0.45)';
-    context.lineWidth = 1.5;
-    context.stroke();
-    context.globalAlpha = 1;
-    return;
-  }
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = blockHighlightColor;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  activeSkin.drawBlock(context, x, y, colorIndex, size, alpha);
+  context.shadowBlur = 0;
 }
 
 function drawGrid() {
@@ -243,6 +414,9 @@ function drawGrid() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // fondo del canvas: en Neón siempre negro puro, en el resto sigue el tema
+  ctx.fillStyle = boardBgColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
   // board
@@ -266,6 +440,8 @@ function draw() {
 function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  nextCtx.fillStyle = boardBgColor;
+  nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
