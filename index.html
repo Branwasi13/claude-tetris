@@ -14,6 +14,12 @@
         <input type="checkbox" id="theme-toggle" aria-label="Cambiar tema claro/oscuro" />
         <span class="slider"></span>
       </label>
+      <select id="skin-select" class="skin-select" title="Cambiar skin visual" aria-label="Cambiar skin visual">
+        <option value="retro">Retro</option>
+        <option value="neon">Neón</option>
+        <option value="pastel">Pastel</option>
+        <option value="pixelart">Pixel art</option>
+      </select>
     </div>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -44,7 +50,7 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -54,7 +60,63 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="save-record-form" class="save-record-form hidden">
+          <label for="player-name-input">¡Entraste al top 5!</label>
+          <input type="text" id="player-name-input" maxlength="12" placeholder="Tu nombre" autocomplete="off" />
+          <button id="save-record-btn">Guardar</button>
+        </div>
+        <div id="overlay-records-panel" class="records-panel">
+          <span class="label">TOP 5</span>
+          <ol id="overlay-records-list" class="records-list"></ol>
+        </div>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box">
+        <p class="pause-title">PAUSA</p>
+        <button id="resume-btn">Reanudar</button>
+        <button id="restart-pause-btn">Reiniciar</button>
+        <button id="controls-toggle-btn">Ver controles</button>
+        <div id="pause-controls" class="hidden">
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+        </div>
+        <label class="pause-level-label" for="start-level-select">Nivel inicial</label>
+        <select id="start-level-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p id="start-title">TETRIS</p>
+        <div class="records-panel">
+          <span class="label">TOP 5 RÉCORDS</span>
+          <ol id="start-records-list" class="records-list"></ol>
+        </div>
+        <div class="best-stats">
+          <span class="label">MEJOR COMBO: <span id="start-best-combo">0</span></span>
+          <span class="label">LÍNEAS MÁXIMAS: <span id="start-max-lines">0</span></span>
+        </div>
+        <button id="play-btn">Jugar</button>
+        <button id="clear-records-btn" class="secondary-btn">Borrar récords</button>
       </div>
     </div>
   </div>

@@ -22,8 +22,10 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [2. `style.css`](#2-stylecss)
     - [3. `game.js`](#3-gamejs)
     - [Flujo del juego](#flujo-del-juego)
+  - [Tabla de récords](#tabla-de-récords)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
+  - [Skins visuales](#skins-visuales)
   - [Personalización](#personalización)
   - [Licencia](#licencia)
 
@@ -42,6 +44,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Tabla de récords local** (top 5, mejor combo y líneas máximas) persistida en `localStorage`.
 
 ---
 
@@ -84,7 +87,20 @@ Después abre `http://localhost:8000` en el navegador.
 | `↑` o `X` | Rotar la pieza en sentido horario |
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Pausar / reanudar               |
+
+---
+
+## Menú de pausa
+
+Al presionar `P` o `Esc` se abre un menú de pausa (`#pause-menu`) con las siguientes opciones:
+
+- **Reanudar** — cierra el menú y continúa la partida donde quedó.
+- **Reiniciar** — arranca una nueva partida sin recargar la página (misma lógica que el botón de reinicio de Game Over).
+- **Ver controles** — despliega dentro del menú la lista de teclas.
+- **Nivel inicial** — un selector (1 a 10) para elegir con qué nivel arranca la próxima partida; la elección se guarda en `localStorage` (`tetris-start-level`) y se aplica la próxima vez que se llama a `init()`. El nivel nunca vuelve a bajar del nivel inicial elegido, aunque el cálculo automático por líneas eliminadas daría uno menor.
+
+Mientras el menú está abierto, se bloquean todos los inputs de movimiento/rotación/caída del juego; solo `P`/`Esc` (para cerrarlo) y los controles propios del menú responden.
 
 ---
 
@@ -98,7 +114,7 @@ Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un overlay para **GAME OVER** (`#overlay`) y otro independiente para el **menú de pausa** (`#pause-menu`), con sus propios botones y el selector de nivel inicial.
 
 ### 2. `style.css`
 
@@ -140,6 +156,19 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 
 ---
 
+## Tabla de récords
+
+El juego guarda localmente (`localStorage`, sin backend) el **top 5 de puntuaciones**:
+
+- Al arrancar la página se muestra una **pantalla de inicio** (`#start-screen`) con el top 5 de récords, el **mejor combo** histórico y las **líneas máximas** alcanzadas en una partida. El botón **Jugar** recién ahí arranca el juego.
+- En el overlay de **Game Over**, si la puntuación de la partida entra en el top 5, aparece un campo de texto para ingresar el nombre del jugador y un botón **Guardar**. Al guardar, el registro se agrega a la tabla y se resalta.
+- Cada registro guarda `{ nombre, puntuación, líneas, nivel, fecha }`, ordenados de mayor a menor puntuación, recortados a 5 elementos.
+- **Combo**: se incrementa cada vez que se limpia al menos una línea en locks consecutivos, y se reinicia a 0 si un lock no limpia ninguna línea. El mejor combo alcanzado se persiste junto con las líneas máximas históricas.
+- El botón **Borrar récords** (en la pantalla de inicio) vacía la tabla de puntuaciones y las estadísticas, previa confirmación.
+- Claves usadas en `localStorage`: `tetris-records` (array del top 5) y `tetris-best-stats` (`{ bestCombo, maxLines }`).
+
+---
+
 ## Tecnologías
 
 - **HTML5** — marcado y dos elementos `<canvas>` (tablero y vista previa).
@@ -161,6 +190,21 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 ├── game.js         # Toda la lógica del Tetris (~300 líneas)
 └── README.md
 ```
+
+---
+
+## Skins visuales
+
+Desde el selector ubicado junto al interruptor de tema claro/oscuro se puede elegir entre 4 skins, que cambian la paleta de colores y el estilo de dibujado de los bloques sin recargar la página:
+
+- **Retro** — bloques cuadrados y colores planos (estilo original).
+- **Neón** — fondo oscuro con efecto de brillo (`shadowBlur`/`shadowColor`) sobre cada bloque.
+- **Pastel** — paleta de tonos suaves con esquinas redondeadas.
+- **Pixel art** — bordes en bisel claro/oscuro y una cuadrícula interna que simula textura de sprite.
+
+En todas las skins se conserva el caso especial de la pieza "tuerca" (el aro vacío en su centro), adaptando su estilo a cada una. La preferencia elegida se guarda en `localStorage` (clave `tetris-skin`) y convive con el tema claro/oscuro.
+
+En `game.js`, cada skin se define como una entrada del objeto `SKINS`, con su propia paleta `colors` y su propia función `drawBlock`. La variable `activeSkin` apunta a la skin actualmente seleccionada, y las funciones `draw()`/`drawNext()` delegan en ella a través de un wrapper `drawBlock` para renderizar el tablero, la pieza fantasma, la pieza actual y la vista previa.
 
 ---
 
