@@ -84,7 +84,20 @@ Después abre `http://localhost:8000` en el navegador.
 | `↑` o `X` | Rotar la pieza en sentido horario |
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Pausar / reanudar               |
+
+---
+
+## Menú de pausa
+
+Al presionar `P` o `Esc` se abre un menú de pausa (`#pause-menu`) con las siguientes opciones:
+
+- **Reanudar** — cierra el menú y continúa la partida donde quedó.
+- **Reiniciar** — arranca una nueva partida sin recargar la página (misma lógica que el botón de reinicio de Game Over).
+- **Ver controles** — despliega dentro del menú la lista de teclas.
+- **Nivel inicial** — un selector (1 a 10) para elegir con qué nivel arranca la próxima partida; la elección se guarda en `localStorage` (`tetris-start-level`) y se aplica la próxima vez que se llama a `init()`. El nivel nunca vuelve a bajar del nivel inicial elegido, aunque el cálculo automático por líneas eliminadas daría uno menor.
+
+Mientras el menú está abierto, se bloquean todos los inputs de movimiento/rotación/caída del juego; solo `P`/`Esc` (para cerrarlo) y los controles propios del menú responden.
 
 ---
 
@@ -98,7 +111,7 @@ Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un overlay para **GAME OVER** (`#overlay`) y otro independiente para el **menú de pausa** (`#pause-menu`), con sus propios botones y el selector de nivel inicial.
 
 ### 2. `style.css`
 
