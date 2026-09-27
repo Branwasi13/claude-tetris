@@ -99,43 +99,43 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 const RECORDS_KEY = 'tetris-records';
 const BEST_STATS_KEY = 'tetris-best-stats';
 
-function loadRecords() {
+// helpers genéricos para no repetir el try/catch en cada get/set
+function safeGet(key, fallback) {
   try {
-    const raw = localStorage.getItem(RECORDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
+}
+
+function safeSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // localStorage no disponible; ignoramos silenciosamente
+  }
+}
+
+function loadRecords() {
+  const parsed = safeGet(RECORDS_KEY, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function saveRecords(records) {
-  try {
-    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
-  } catch {
-    // localStorage no disponible; ignoramos silenciosamente
-  }
+  safeSet(RECORDS_KEY, records);
 }
 
 function loadBestStats() {
-  try {
-    const raw = localStorage.getItem(BEST_STATS_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return {
-      bestCombo: parsed && typeof parsed.bestCombo === 'number' ? parsed.bestCombo : 0,
-      maxLines: parsed && typeof parsed.maxLines === 'number' ? parsed.maxLines : 0,
-    };
-  } catch {
-    return { bestCombo: 0, maxLines: 0 };
-  }
+  const parsed = safeGet(BEST_STATS_KEY, null);
+  return {
+    bestCombo: parsed && typeof parsed.bestCombo === 'number' ? parsed.bestCombo : 0,
+    maxLines: parsed && typeof parsed.maxLines === 'number' ? parsed.maxLines : 0,
+  };
 }
 
 function saveBestStats() {
-  try {
-    localStorage.setItem(BEST_STATS_KEY, JSON.stringify({ bestCombo, maxLines }));
-  } catch {
-    // localStorage no disponible; ignoramos silenciosamente
-  }
+  safeSet(BEST_STATS_KEY, { bestCombo, maxLines });
 }
 
 function qualifiesForTop(currentScore) {
@@ -414,7 +414,8 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlayRecordsPanel.classList.remove('hidden');
-  if (lines > maxLines) maxLines = lines;
+  // maxLines/bestCombo ya se sincronizan en cada lockPiece(); acá sólo garantizamos
+  // que quede persistido antes de mostrar el overlay de game over
   saveBestStats();
 
   const records = loadRecords();
